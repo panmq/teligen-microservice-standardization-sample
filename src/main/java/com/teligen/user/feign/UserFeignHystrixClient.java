@@ -12,6 +12,7 @@ import com.teligen.user.feign.UserFeignHystrixClient.HystrixClientFallback;
 
 /**
  * 使用@FeignClient注解的fallback属性，指定fallback类
+ * 也适用于开发时提供默认的返回方便前端测试
  */
 @FeignClient(name = "teligen-microservice-provider-sample", fallback = HystrixClientFallback.class)
 public interface UserFeignHystrixClient {
@@ -35,7 +36,7 @@ public interface UserFeignHystrixClient {
       HystrixClientFallback.LOGGER.info("异常发生，进入fallback方法，接收的参数：id = {}", id);
       User user = new User();
       user.setId(-1L);
-      user.setUsername("default username");
+      user.setUsername("Mr. Bean");
       user.setAge(0);
       return user;
     }
