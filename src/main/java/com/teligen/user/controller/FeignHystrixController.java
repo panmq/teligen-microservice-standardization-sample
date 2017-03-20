@@ -69,15 +69,14 @@ public class FeignHystrixController {
 				System.out.println("======client failure : " + t);
 			}
 		});
-		ResponseEntity resp;
 		try {
-			resp = future.get(Integer.parseInt(this.asyncTimeoutInSec), TimeUnit.SECONDS);
-			return (User) resp.getBody();
+			ResponseEntity<User> resp = future.get(Integer.parseInt(this.asyncTimeoutInSec), TimeUnit.SECONDS);
+			return resp.getBody();
 		} catch (InterruptedException | ExecutionException | TimeoutException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			throw new RuntimeException(e);
 		}
-		throw new RuntimeException();
+		
 	}
 
 }
