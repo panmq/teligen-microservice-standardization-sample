@@ -22,7 +22,7 @@ public class MovieFeignHystrixApplication {
 	 * @return restTemplate
 	 */
 	@Bean
-//	@LoadBalanced
+	@LoadBalanced
 	public RestTemplate restTemplate() {
 		return new RestTemplate();
 	}
@@ -33,7 +33,7 @@ public class MovieFeignHystrixApplication {
 	 * @return asyncRestTemplate
 	 */
 	@Bean
-//	@LoadBalanced
+	@LoadBalanced
 	public AsyncRestTemplate asyncRestTemplate() {
 		return new AsyncRestTemplate();
 	}

@@ -18,4 +18,4 @@ eureka:
     
 ### 参考：https://spring.io/guides/gs/client-side-load-balancing/
 async:
-  timeoutInSec: 10
+  timeoutInSec: 20
