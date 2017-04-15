@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans profile="sample" xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:batch="http://www.springframework.org/schema/batch"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:int-file="http://www.springframework.org/schema/integration/file"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+		http://www.springframework.org/schema/integration/file http://www.springframework.org/schema/integration/file/spring-integration-file.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+
+	<!-- TODO: 如果要新建一份配置，先把本文件所有的'sample'替换成CommonItem.resourceType -->
+	<int-file:inbound-channel-adapter channel="sampleFiles" directory="/tmp/si/input/"
+		prevent-duplicates="true" filename-pattern="*.input" comparator="fileCreationTimeComparator">
+		<int:poller max-messages-per-poll="5" cron="0/1 * * * * *" task-executor="taskExecutor" />
+	</int-file:inbound-channel-adapter>
+	
+	<!-- TODO: add a int:filter here to ask dispacher whether I can process or not -->
+
+	<int:transformer input-channel="sampleFiles" output-channel="jobsHandler">
+		<bean class="com.teligen.integration.transformer.FileMessageToJobRequest">
+			<property name="fileParameterName" value="input.file.name" />
+			<property name="job" ref="sampleJob" />
+		</bean>
+	</int:transformer>
+	
+	<batch:job id="sampleJob">
+		<batch:step id="sampleStep">
+			<batch:tasklet task-executor="taskExecutor">
+				<batch:chunk reader="sampleItemReader" processor="sampleItemProcessor"
+					writer="commonItemWriter" commit-interval="10">
+				</batch:chunk>
+			</batch:tasklet>
+		</batch:step>
+	</batch:job>
+
+	<bean id="sampleItemReader" class="org.springframework.batch.item.file.FlatFileItemReader" scope="step">
+		<property name="strict" value="false" />
+		<property name="resource" value="file:///#{jobParameters['input.file.name']}" />
+		<property name="linesToSkip" value="1" />
+		<property name="lineMapper">
+			<bean class="org.springframework.batch.item.file.mapping.DefaultLineMapper">
+				<property name="lineTokenizer">
+					<bean class="org.springframework.batch.item.file.transform.DelimitedLineTokenizer">
+						<property name="delimiter" value="," />
+						<!-- 字段名只支持从s1到s99 -->
+						<property name="names" value="s1,s2,s3,s4" />
+					</bean>
+				</property>
+				<property name="fieldSetMapper" ref="commonFieldSetMapper" />
+			</bean>
+		</property>
+	</bean>
+	
+	<bean id="sampleItemProcessor" class="com.teligen.batch.CommonItemProcessor">
+		<property name="resourceType" value="sample" />
+	</bean>
+	
+	<int:channel id="sampleProcessorChain" />
+
+	<int:chain input-channel="sampleProcessorChain">
+		<int:header-enricher>
+			<!-- TODO: 必填：topic，data -->
+			<!-- TODO: 选填：partition（int，默认0），key（Integer，默认null） -->
+			<int:header name="topic" value="sample" />
+			<int:header name="data" expression="payload.s1 + '|' + payload.s2 + '|' +payload.s3 + '|' +payload.s4" />
+		</int:header-enricher>
+		<int:transformer ref="commonItemTransformer" method="transformCommonItemFromHeaders" />
+	</int:chain>
+
+</beans>

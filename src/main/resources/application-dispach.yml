@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: teligen-microservice-standardization-dispach
+  jpa:
+    generate-ddl: false
+    show-sql: true
+    hibernate:
+      ddl-auto: none
+  datasource:                           # 指定数据源
+    platform: h2                        # 指定数据源类型
+#    schema: classpath:sql/schema.sql,classpath:/org/springframework/batch/core/schema-drop-h2.sql,classpath:/org/springframework/batch/core/schema-h2.sql      # 指定h2数据库的建表脚本
+#    data: classpath:sql/data.sql,classpath:database/dbinit.sql            # 指定h2数据库的insert脚本
+    schema: classpath:sql/schema.sql      # 指定h2数据库的建表脚本
+    data: classpath:sql/data.sql            # 指定h2数据库的insert脚本
+    url: jdbc:h2:file:/tmp/h2/${spring.application.name} #add start
+#    username: sa
+#    password: sa
+#    driverClassName: org.h2.Driver
+  h2:                 # 这类新加
+    console:
+      enabled: true
+      path: /h2-console #default
+      settings:
+        trace: true
+        web-allow-others: true
+server:
+  port: 8001
+logging:
+  file: /tmp/${spring.application.name}.log
+  level:
+    root: INFO
+    org.hibernate: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.type.descriptor.sql.BasicExtractor: TRACE
+    com.itmuch.youran.persistence: ERROR

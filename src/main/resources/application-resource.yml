@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: teligen-microservice-standardization-resource
+server:
+  port: 8002
+logging:
+  file: /tmp/${spring.application.name}.log
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://discovery:8761/eureka/
+#业务配置(resource.xml)开始
+taskExecutor:
+  pool-size: 5
+  keep-alive: 120
+  queue-capacity: 500
+resourceKafkaTemplate:
+  bootstrap:
+    servers: discovery:9092
+  batch:
+    size: 10
+  buffer:
+    memory: 33554432

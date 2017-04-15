@@ -1,0 +1,1 @@
+--insert into user (id, username, age) values (1,'Tom',12);

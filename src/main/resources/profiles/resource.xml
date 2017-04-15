@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans profile="resource" xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:batch="http://www.springframework.org/schema/batch"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:int-file="http://www.springframework.org/schema/integration/file"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+		http://www.springframework.org/schema/integration/file http://www.springframework.org/schema/integration/file/spring-integration-file.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+
+	<!-- 根据机器的线程数调 -->
+	<task:executor id="taskExecutor" pool-size="${taskExecutor.pool-size}" keep-alive="${taskExecutor.keep-alive}"
+		queue-capacity="${taskExecutor.queue-capacity}" />
+	
+	<!-- 根据Kafka集群配置调 -->
+	<bean id="resourceKafkaTemplate" class="org.springframework.kafka.core.KafkaTemplate">
+		<constructor-arg>
+			<bean class="org.springframework.kafka.core.DefaultKafkaProducerFactory">
+				<constructor-arg>
+					<map>
+						<entry key="bootstrap.servers" value="${resourceKafkaTemplate.bootstrap.servers}" />
+						<entry key="batch.size" value="${resourceKafkaTemplate.batch.size}" />
+						<entry key="buffer.memory" value="${resourceKafkaTemplate.buffer.memory}" />
+						<entry key="key.serializer" value="org.apache.kafka.common.serialization.IntegerSerializer" />
+						<entry key="value.serializer" value="org.apache.kafka.common.serialization.StringSerializer" />
+						<!-- more producer properties -->
+					</map>
+				</constructor-arg>
+			</bean>
+		</constructor-arg>
+		<constructor-arg name="autoFlush" value="true" />
+		<property name="defaultTopic" value="defaultTopic" />
+	</bean>
+	
+	<bean id="fileCreationTimeComparator" class="com.teligen.integration.file.filters.comparator.FileCreationTimeComparator" />
+
+	<bean id="stepScope" class="org.springframework.batch.core.scope.StepScope">
+		<property name="autoProxy" value="true" />
+	</bean>
+	
+	<bean id="commonFieldSetMapper" class="org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper">
+		<property name="targetType" value="com.teligen.domain.CommonItem" />
+	</bean>
+	
+	<int:gateway id="processorGateway"
+		service-interface="com.teligen.integration.gateway.ProcessorService">
+		<int:method name="process" request-channel="resourceProcessorRouter" />
+	</int:gateway>
+	
+	<int:router input-channel="resourceProcessorRouter">
+		<bean class="com.teligen.integration.router.ResourceProcessorRouter"/>
+	</int:router>
+
+	<bean id="commonItemTransformer" class="com.teligen.integration.transformer.CommonItemTransformer" />
+	
+	<bean id="commonItemWriter" class="com.teligen.batch.CommonItemWriter" />
+
+	<int:service-activator input-channel="jobsHandler" output-channel="resourceStatuses" method="launch">
+		<bean class="org.springframework.batch.integration.launch.JobLaunchingMessageHandler">
+			<constructor-arg ref="jobLauncher" />
+		</bean>
+	</int:service-activator>
+	
+	<int:chain input-channel="resourceStatuses" output-channel="end">
+		<int:transformer expression="payload.getJobParameters().getString('input.file.name')" />
+		<int:transformer expression="new java.io.File(payload)" />
+		<int:service-activator expression="payload.delete()" />
+	</int:chain>
+	
+	<int:channel id="end">
+		<int:queue />
+	</int:channel>
+	
+</beans>
